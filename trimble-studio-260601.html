@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Trimble Studio</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --black: #000; --white: #fff; --gray: #555; --light: #e0e0e0; }
+  body {
+    font-family: "Courier New", Courier, monospace;
+    background: var(--white);
+    color: var(--black);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+    transition: background 0.3s, border-bottom 0.3s;
+  }
+  /* when on the hero, show a transparent nav so hero background is visible */
+  nav.on-hero { background: transparent; border-bottom: none; }
+  nav.on-page { background: var(--white); border-bottom: 1px solid var(--black); }
+  nav.on-page .nav-logo,
+  nav.on-page .nav-links a { color: var(--black); }
+  .nav-logo {
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: var(--white);
+    text-decoration: none;
+  }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a {
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    color: var(--white);
+  }
+  .nav-links a:hover { opacity: 0.4; }
+  .nav-toggle {
+    display: none;
+    border: none;
+    background: none;
+    color: currentColor;
+    width: 44px;
+    height: 44px;
+    position: relative;
+    cursor: pointer;
+    padding: 0;
+    z-index: 200;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-toggle span,
+  .nav-toggle::before,
+  .nav-toggle::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    width: 22px;
+    height: 2px;
+    border-radius: 1px;
+    background: currentColor;
+    transform: translateX(-50%);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+  .nav-toggle span { top: 50%; transform: translate(-50%, -50%); }
+  .nav-toggle::before { top: 13px; }
+  .nav-toggle::after { bottom: 13px; }
+
+  /* ─── PAGES ─── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ─── SHARED SECTION HEADER ─── */
+  .inner-page {
+    padding-top: 80px;
+    min-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+  }
+  /* Make footers stick to the bottom of the viewport within each page */
+  .inner-page > footer {
+    margin-top: auto;
+  }
+  .section-header {
+    padding: 32px 40px;
+    border-bottom: 1px solid var(--white);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .section-title {
+    font-family: inherit;
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: normal;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  .project-page-title {
+    font-family: inherit;
+    font-size: clamp(calc(28px * 2 / 3), calc(4vw * 2 / 3), calc(48px * 2 / 3));
+    font-weight: normal;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  .project-page-header {
+    padding-left: 40px;
+  }
+
+  /* ─── WORK GRID ─── */
+  .work-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    padding: 48px 40px 64px;
+    justify-content: flex-start;
+  }
+  #page-architecture .work-grid,
+  #page-design .work-grid {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 40px;
+    align-items: stretch; /* column flex: let .work-item width:100% fill track */
+    width: min(520px, 100%);
+    max-width: 520px;
+    padding-left: 0;
+    padding-right: 40px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .work-item {
+    width: 220px;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  #page-architecture .work-item,
+  #page-design .work-item {
+    width: 100%;
+    max-width: 520px;
+  }
+  #page-architecture .work-img,
+  #page-design .work-img {
+    width: 100%;
+    height: 360px;
+  }
+  #page-architecture .work-info,
+  #page-design .work-info {
+    justify-content: flex-end;
+    gap: 24px;
+    text-align: right;
+  }
+  #page-architecture .inner-page > footer,
+  #page-design .inner-page > footer {
+    justify-content: flex-end;
+    gap: 32px;
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+  .work-item:hover { opacity: 0.7; }
+  .work-img { width: 220px; height: 240px; }
+  .work-info { padding: 14px 0; display: flex; justify-content: space-between; align-items: flex-start; }
+  .work-name { font-size: 13px; margin-bottom: 3px; }
+  .work-type { font-size: 10px; color: var(--gray); letter-spacing: 0.08em; text-transform: uppercase; }
+  .work-year { font-size: 10px; color: var(--gray); }
+  .img-a { background: #232320; }
+  .img-b { background: #1c1c1a; }
+  .img-c { background: #28271f; }
+  .img-d { background: #1f1f1c; }
+
+  /* ─── PROJECT PAGES ─── */
+  .project-page-meta { display: flex; align-items: center; gap: 32px; }
+  .project-type-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray); }
+  .back-link {
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--gray); cursor: pointer; text-decoration: none;
+    border-bottom: 1px solid var(--light); padding-bottom: 1px; transition: color 0.2s;
+  }
+  .back-link:hover { color: var(--black); border-color: var(--black); }
+  .project-photo-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 24px;
+  }
+  .project-photo-grid .project-photo {
+    display: none;
+  }
+  .project-photo-grid .project-photo.visible {
+    display: block;
+  }
+  .project-desc {
+    padding: 40px 40px;
+    color: #333;
+    font-size: 13px;
+    line-height: 1.8;
+    max-width: 900px;
+    margin: 0 40px 0 auto;
+    text-align: right;
+  }
+  .project-photo {
+    width: min(80%, 900px);
+    margin: 0 40px 0 auto;
+    aspect-ratio: 3/2;
+    background: #1a1a18;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .project-photo:hover { opacity: 0.85; }
+  .ph-a { background: #232320; }
+  .ph-b { background: #1c1c1a; }
+  .ph-c { background: #28271f; }
+  .ph-d { background: #2a2a26; }
+  .ph-e { background: #1f1e1b; }
+
+  /* ─── HOME HERO OVERRIDE ─── */
+  #page-home > div {
+    position: relative;
+    background-image: url('L1001876.jpg') !important;
+    background-size: 100% 100% !important;
+    background-position: top center !important;
+    background-repeat: no-repeat !important;
+    width: 100%;
+    aspect-ratio: 3672 / 5497;
+    height: auto !important;
+    max-width: none;
+  }
+  #page-home > div > * {
+    position: absolute;
+    inset: 0;
+  }
+  .home-hero-copy {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 20px;
+    pointer-events: none;
+  }
+  /*these home heroes do nothing at the moment.
+  /*.home-hero-copy h1 {
+    color: var(--white);
+    font-size: clamp(32px, 6vw, 8px);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.05;
+    text-shadow: 0 0 24px rgba(0,0,0,0.45);
+  }
+  #page-home > div::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.18);
+    pointer-events: none;
+  }
+
+  /* ─── OFFICE ─── */
+ /* .office-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--white); }
+  .office-left { padding: 48px 40px; border-right: 1px solid var(--black); }
+  .office-right { padding: 48px 40px; border-right: 1px solid var(--black); }
+  .office-contact { padding: 48px 40px; }
+  .studio-body { font-size: 14px; line-height: 1.8; color: #333; max-width: 480px; margin-bottom: 28px; }
+  .team-label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gray); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--light); }
+  .team-member { padding: 16px 0; border-bottom: 1px solid var(--light); display: flex; justify-content: space-between; align-items: baseline; }
+  .member-name { font-size: 14px; }
+  .member-role { font-size: 11px; color: var(--gray); letter-spacing: 0.06em; text-transform: uppercase; }
+  .contact-email { font-size: 14px; text-decoration: underline; display: block; margin-bottom: 10px; color: var(--black); }
+  .contact-phone { font-size: 13px; color: var(--gray); margin-bottom: 32px; }
+  .detail-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: #999; margin-bottom: 8px; }
+  .detail-val { font-size: 13px; line-height: 1.65; }
+
+  /* ─── CLIENTS ─── */
+  .clients-grid { display: grid; grid-template-columns: repeat(3, 1fr); max-width: 900px; padding: 48px 40px 64px; gap: 20px 40px; justify-items: end; }
+  .client-item { font-size: 13px; line-height: 1.6; text-align: right; }
+
+  /* ─── FOOTER ─── */
+  footer { padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .foot-copy { font-size: 11px; color: #999; }
+  .foot-links { display: flex; gap: 24px; }
+  .foot-links a { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--gray); text-decoration: none; cursor: pointer; }
+  .foot-links a:hover { text-decoration: underline; }
+  .foot-links a[onclick="showPage('office')"] { display: none; }
+
+  @media (max-width: 900px) {
+    #page-home > div {
+      width: 100%;
+      height: auto !important;
+      aspect-ratio: 3672 / 5497;
+      max-width: none;
+    }
+    nav {
+      padding: 16px 20px;
+    }
+    .nav-toggle {
+      display: inline-flex;
+      align-items: center;
+    }
+    .nav-links {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      left: 0;
+      background: rgba(255,255,255,0.98);
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.3s ease;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      pointer-events: none;
+    }
+    .nav-links.open {
+      max-height: 260px;
+      pointer-events: auto;
+    }
+    .nav-links li {
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+    .nav-links a {
+      padding: 14px 22px;
+      color: var(--black);
+    }
+    .nav-links a:hover { opacity: 0.7; }
+    .inner-page {
+      padding-top: 70px;
+      min-height: auto;
+    }
+    .section-header {
+      padding: 24px 20px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .section-title,
+    .project-page-title {
+      text-align: left;
+      width: 100%;
+      font-size: clamp(24px, 7vw, 36px);
+    }
+    .project-page-header {
+      padding: 0 20px;
+    }
+    .project-page-meta {
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .project-desc {
+      padding: 24px 20px;
+      margin: 0 auto;
+      text-align: left;
+      max-width: 100%;
+    }
+    .work-grid {
+      padding: 24px 20px 48px;
+      gap: 20px;
+      justify-content: center;
+    }
+    .work-item {
+      width: 100%;
+      max-width: 100%;
+    }
+    .work-img {
+      width: 100%;
+      height: 220px;
+    }
+    .work-info {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    #page-architecture .work-grid,
+    #page-design .work-grid {
+      width: 100%;
+      max-width: 100%;
+      padding-right: 20px;
+      margin-left: 0;
+    }
+    .office-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      border: none;
+    }
+    .office-left,
+    .office-right,
+    .office-contact {
+      padding: 24px 20px;
+      border-right: none;
+      border-bottom: 1px solid var(--light);
+    }
+    .office-contact {
+      border-bottom: none;
+    }
+    .clients-grid {
+      grid-template-columns: 1fr;
+      padding: 24px 20px 40px;
+      gap: 16px;
+    }
+    footer {
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 16px 20px;
+      justify-content: center;
+      text-align: center;
+    }
+    .foot-links {
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .project-photo-grid {
+      padding: 20px;
+      gap: 18px;
+    }
+    .project-photo {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      aspect-ratio: 4 / 3;
+    }
+  }
+
+  @media (max-width: 560px) {
+    #page-home > div {
+      height: 55vh !important;
+      min-height: 320px;
+    }
+    body { font-size: 14px; }
+    nav { padding: 14px 16px; }
+    .nav-links.open { max-height: 320px; }
+    .nav-toggle { font-size: 11px; }
+    .work-img { height: 180px; }
+    .project-photo { aspect-ratio: 3 / 2; }
+    .office-left, .office-right, .office-contact { padding: 20px 16px; }
+    .section-header, .project-page-header { padding: 20px 16px; }
+    .project-desc { padding: 20px 16px; }
+    .foot-links a, .contact-email, .contact-phone { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="main-nav" class="on-hero">
+  <a class="nav-logo" onclick="showPage('home')">Trimble Studio</a>
+  <button type="button" class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation menu"><span aria-hidden="true"></span></button>
+  <ul class="nav-links">
+    <li><a onclick="showPage('architecture')">Architecture</a></li>
+    <li><a onclick="showPage('design')">Design</a></li>
+    <li><a onclick="showPage('clients')">Clients</a></li>
+  </ul>
+</nav>
+
+<!-- ══════════════ HOME ══════════════ -->
+<div id="page-home" class="page active">
+  <div style="position:relative; cursor:pointer;" onclick="showPage('architecture')">
+    <div style="position:absolute; inset:0;"></div>
+  </div>    <div class="home-hero-copy">
+      <!-- <h1>Lorem Ipsum</h1> -->
+    </div>
+  </div>
+
+  </div>
+
+<!-- ══════════════ ARCHITECTURE ══════════════ -->
+<div id="page-architecture" class="page">
+  <div class="inner-page">
+    <div class="section-header"><h1 class="section-title">Architecture</h1></div>
+    <div class="work-grid">
+      <div class="work-item" onclick="showPage('project-01')"><div class="work-img img-a"></div><div class="work-info"><div><div class="work-name">Project 01</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-02')"><div class="work-img img-b"></div><div class="work-info"><div><div class="work-name">Project 02</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-03')"><div class="work-img img-c"></div><div class="work-info"><div><div class="work-name">Project 03</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-04')"><div class="work-img img-d"></div><div class="work-info"><div><div class="work-name">Project 04</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-05')"><div class="work-img img-a"></div><div class="work-info"><div><div class="work-name">Project 05</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-06')"><div class="work-img img-b"></div><div class="work-info"><div><div class="work-name">Project 06</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-07')"><div class="work-img img-c"></div><div class="work-info"><div><div class="work-name">Project 07</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-08')"><div class="work-img img-d"></div><div class="work-info"><div><div class="work-name">Project 08</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-09')"><div class="work-img img-a"></div><div class="work-info"><div><div class="work-name">Project 09</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-10')"><div class="work-img img-b"></div><div class="work-info"><div><div class="work-name">Project 10</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-11')"><div class="work-img img-c"></div><div class="work-info"><div><div class="work-name">Project 11</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-12')"><div class="work-img img-d"></div><div class="work-info"><div><div class="work-name">Project 12</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-13')"><div class="work-img img-a"></div><div class="work-info"><div><div class="work-name">Project 13</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-14')"><div class="work-img img-b"></div><div class="work-info"><div><div class="work-name">Project 14</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-15')"><div class="work-img img-c"></div><div class="work-info"><div><div class="work-name">Project 15</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-16')"><div class="work-img img-d"></div><div class="work-info"><div><div class="work-name">Project 16</div><div class="work-type">Residential</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-17')"><div class="work-img img-a"></div><div class="work-info"><div><div class="work-name">Project 17</div><div class="work-type">Civic</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-18')"><div class="work-img img-b"></div><div class="work-info"><div><div class="work-name">Project 18</div><div class="work-type">Civic</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-19')"><div class="work-img img-c"></div><div class="work-info"><div><div class="work-name">Project 19</div><div class="work-type">Restaurant</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('project-20')"><div class="work-img img-d"></div><div class="work-info"><div><div class="work-name">Project 20</div><div class="work-type">Retail</div></div><div class="work-year">—</div></div></div>
+    </div>
+    <footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('home')">Home</a><a onclick="showPage('office')">Contact</a></div></footer>
+  </div>
+</div>
+
+<!-- ══════════════ DESIGN ══════════════ -->
+<div id="page-design" class="page">
+  <div class="inner-page">
+    <div class="section-header"><h1 class="section-title">Design</h1></div>
+    <div class="work-grid">
+      <div class="work-item" onclick="showPage('design-object-01')"><div class="work-img img-b"></div><div class="work-info"><div><div class="work-name">Design Object 01</div><div class="work-type">Furniture</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('design-object-02')"><div class="work-img img-c"></div><div class="work-info"><div><div class="work-name">Design Object 02</div><div class="work-type">Object</div></div><div class="work-year">—</div></div></div>
+      <div class="work-item" onclick="showPage('design-object-03')"><div class="work-img img-d"></div><div class="work-info"><div><div class="work-name">Design Object 03</div><div class="work-type">Furniture</div></div><div class="work-year">—</div></div></div>
+    </div>
+    <footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('home')">Home</a><a onclick="showPage('office')">Contact</a></div></footer>
+  </div>
+</div>
+
+<div id="page-design-object-01" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Design Object 01</h1><div class="project-page-meta"><span class="project-type-label">Furniture</span><a class="back-link" onclick="showPage('design')">← Design</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-b"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('design')">← Design</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+<div id="page-design-object-02" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Design Object 02</h1><div class="project-page-meta"><span class="project-type-label">Object</span><a class="back-link" onclick="showPage('design')">← Design</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-c"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('design')">← Design</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+<div id="page-design-object-03" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Design Object 03</h1><div class="project-page-meta"><span class="project-type-label">Furniture</span><a class="back-link" onclick="showPage('design')">← Design</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-d"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('design')">← Design</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+<!-- ══════════════ OFFICE ══════════════ -->
+<div id="page-office" class="page">
+  <div class="inner-page">
+    <div class="section-header"><h1 class="section-title">Office</h1></div>
+    <div class="office-grid">
+      <div class="office-left">
+        <p class="studio-body">Our approach to every project is unique because every project is a true collaboration — as unique, innovative, and diverse as our clientele.</p>
+        <p class="studio-body">We do: architecture, design-build, interior design, furniture design, siteplanning, historic preservation.</p>
+        <p class="studio-body">Our current projects are in Greece, the Hamptons, New York City, San Francisco, upstate New York, and Asia.</p>
+        <p class="studio-body">We are obsessed with natural light, lighting, functional and well resolved spaces, and quality.</p>
+      </div>
+      <div class="office-right">
+        <div class="team-label">The Team</div>
+        <div class="team-member"><span class="member-name">Sam Trimble</span><span class="member-role">Studio Director</span></div>
+        <div class="team-member"><span class="member-name">Ryan Bemberg</span><span class="member-role">Project Manager</span></div>
+        <div class="team-member"><span class="member-name">David Lally</span><span class="member-role">Project Manager</span></div>
+        <div class="team-member"><span class="member-name">Dylan Bemberg</span><span class="member-role"></span></div>
+        <div class="team-member"><span class="member-name">Roo Trimble</span><span class="member-role"></span></div>
+        <div class="team-member"><span class="member-name">Brent Trimble</span><span class="member-role"></span></div>
+      </div>
+      <div class="office-contact">
+        <div class="detail-label" style="margin-bottom:16px;">Contact</div>
+        <a class="contact-email" href="mailto:st@trimble-architecture.com">st@trimble-architecture.com</a>
+        <p class="contact-phone">(212) 966-1665</p>
+        <div class="detail-label">Address</div>
+        <div class="detail-val" style="margin-top:8px;">250 W Broadway, 3rd Floor<br>New York, NY 10013</div>
+      </div>
+    </div>
+    <footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('home')">Home</a></div></footer>
+  </div>
+</div>
+
+<!-- ══════════════ CLIENTS ══════════════ -->
+<div id="page-clients" class="page">
+  <div class="inner-page">
+    <div class="section-header"><h1 class="section-title">Clients</h1></div>
+    <div class="clients-grid">
+      <div class="client-item">Patti Scialfa<br>Bruce Springsteen</div>
+      <div class="client-item">Debra &amp; Bing Gordon</div>
+      <div class="client-item">Ku-Ling &amp; Evan Yurman</div>
+      <div class="client-item">Jacques Grange</div>
+      <div class="client-item">Yoko Ono<br>Sean Lennon</div>
+      <div class="client-item">Jann Wenner &amp; Matt Nye<br>Jane Wenner<br>Theo Wenner<br>Gus Wenner</div>
+      <div class="client-item">Martinos</div>
+      <div class="client-item">Diane Sawyer<br>Mike Nichols</div>
+      <div class="client-item">Bryan Lourd</div>
+      <div class="client-item">Jim Parsons &amp; Todd Spiewak</div>
+      <div class="client-item">Liv Tyler</div>
+      <div class="client-item">Andrew VanWyngarden (MGMT)</div>
+      <div class="client-item">Adam Kimmel<br>Leelee Sobieski</div>
+      <div class="client-item">Glenn Dubin</div>
+      <div class="client-item">Metropolitan Opera</div>
+      <div class="client-item">Lady M Confections<br>Royce Chocolates</div>
+    </div>
+    <footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('home')">Home</a><a onclick="showPage('office')">Contact</a></div></footer>
+  </div>
+</div>
+
+<!-- ══════════════ PROJECT PAGES ══════════════ -->
+<div id="page-project-01" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 01</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo wide ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo wide ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-02" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 02</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-b"></div><div class="project-photo wide ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo wide ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-03" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 03</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo wide ph-a"></div><div class="project-photo wide ph-b"></div><div class="project-photo ph-e"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-a"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-04" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 04</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo wide ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo wide ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-05" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 05</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo wide ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo wide ph-c"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-06" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 06</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo wide ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo wide ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-07" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 07</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-c"></div><div class="project-photo wide ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo wide ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-08" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 08</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo wide ph-c"></div><div class="project-photo wide ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-09" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 09</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo wide ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo wide ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-10" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 10</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo wide ph-b"></div><div class="project-photo wide ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-11" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 11</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-a"></div><div class="project-photo wide ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo wide ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-12" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 12</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo wide ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo wide ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-13" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 13</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo wide ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo wide ph-c"></div><div class="project-photo ph-d"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-14" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 14</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo wide ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo wide ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-15" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 15</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo wide ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo wide ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-16" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 16</h1><div class="project-page-meta"><span class="project-type-label">Residential</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo wide ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo wide ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-17" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 17</h1><div class="project-page-meta"><span class="project-type-label">Civic</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-d"></div><div class="project-photo wide ph-e"></div><div class="project-photo wide ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo wide ph-e"></div><div class="project-photo ph-a"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-18" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 18</h1><div class="project-page-meta"><span class="project-type-label">Civic</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo wide ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo wide ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-19" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 19</h1><div class="project-page-meta"><span class="project-type-label">Restaurant</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo wide ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo wide ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo ph-a"></div><div class="project-photo ph-b"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+
+<div id="page-project-20" class="page"><div class="inner-page"><div class="project-page-header"><h1 class="project-page-title">Project 20</h1><div class="project-page-meta"><span class="project-type-label">Retail</span><a class="back-link" onclick="showPage('architecture')">← Architecture</a></div></div><div class="project-desc">Date: 2021<br>Size: 5,00 sq/ft<br>Client: Private<br>Location: Brooklyn, NY</div><div class="project-photo-grid"><div class="project-photo wide ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div><div class="project-photo wide ph-a"></div><div class="project-photo ph-b"></div><div class="project-photo ph-c"></div><div class="project-photo ph-d"></div><div class="project-photo ph-e"></div></div><footer><span class="foot-copy">© 2025 Trimble Studio.</span><div class="foot-links"><a onclick="showPage('architecture')">← Architecture</a><a onclick="showPage('office')">Contact</a></div></footer></div></div>
+
+<script>
+  function showPage(id) {
+    const pageId = 'page-' + id;
+    const target = document.getElementById(pageId);
+    if (!target) return;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    target.classList.add('active');
+    const nav = document.getElementById('main-nav');
+    nav.className = id === 'home' ? 'on-hero' : 'on-page';
+    const navLinks = nav.querySelector('.nav-links');
+    if (navLinks) navLinks.classList.remove('open');
+    window.scrollTo(0, 0);
+    populateProjectDetails(pageId);
+  }
+
+  function toggleNav() {
+    const navLinks = document.querySelector('#main-nav .nav-links');
+    if (!navLinks) return;
+    navLinks.classList.toggle('open');
+  }
+
+  const projectDetails = {
+    'page-design-object-01': { date: '2021', size: '5,00 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-design-object-02': { date: '2021', size: '3,20 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-design-object-03': { date: '2021', size: '4,50 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-01': { date: '3321', size: '5,00 sq/ft', client: 'public', location: 'Brooklyn, NY' },
+    'page-project-02': { date: '2001', size: '6,20 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-03': { date: '1974', size: '7,10 sq/ft', client: 'Jane', location: 'Brooklyn, NY' },
+    'page-project-04': { date: '2001', size: '5,80 sq/ft', client: 'Jane Wenner', location: 'Brooklyn, NY' },
+    'page-project-05': { date: '3331', size: '4,90 sq/ft', client: 'Jane Wenner', location: 'Brooklyn, NY' },
+    'page-project-06': { date: '2023', size: '6,40 sq/ft', client: 'Jane Wenner', location: 'Brooklyn, NY' },
+    'page-project-07': { date: '1000', size: '8,00 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-08': { date: '2022', size: '5,60 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-09': { date: '2021', size: '5,20 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-10': { date: '2022', size: '6,00 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-11': { date: '2021', size: '7,30 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-12': { date: '2023', size: '5,70 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-13': { date: '2022', size: '6,50 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-14': { date: '2023', size: '4,30 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-15': { date: '2021', size: '5,90 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-16': { date: '2022', size: '6,20 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-17': { date: '2021', size: '7,80 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-18': { date: '2022', size: '5,40 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-19': { date: '2021', size: '6,90 sq/ft', client: 'Private', location: 'Brooklyn, NY' },
+    'page-project-20': { date: '2023', size: '4,80 sq/ft', client: 'Private', location: 'Brooklyn, NY' }
+  };
+
+  function renderProjectDetails(pageId) {
+    const details = projectDetails[pageId];
+    const desc = document.querySelector('#' + pageId + ' .project-desc');
+    if (!desc || !details) return;
+    desc.innerHTML = `Date: ${details.date}<br>Size: ${details.size}<br>Client: ${details.client}<br>Location: ${details.location}`;
+  }
+
+  function populateProjectDetails(pageId) {
+    if (pageId) {
+      renderProjectDetails(pageId);
+      return;
+    }
+    document.querySelectorAll('.page').forEach(page => renderProjectDetails(page.id));
+  }
+
+  function initProjectGalleries() {
+    document.querySelectorAll('.project-photo-grid').forEach(grid => {
+      const photos = Array.from(grid.querySelectorAll('.project-photo'));
+      if (!photos.length) return;
+      let activeIndex = photos.findIndex(photo => photo.classList.contains('visible'));
+      if (activeIndex === -1) activeIndex = 0;
+      photos.forEach((photo, index) => {
+        photo.classList.toggle('visible', index === activeIndex);
+        photo.addEventListener('click', event => {
+          const rect = photo.getBoundingClientRect();
+          if (event.clientX <= rect.left + rect.width / 2) return;
+          const current = photos.findIndex(p => p.classList.contains('visible'));
+          const nextIndex = (current + 1) % photos.length;
+          photos[current].classList.remove('visible');
+          photos[nextIndex].classList.add('visible');
+        });
+      });
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initProjectGalleries();
+    populateProjectDetails();
+  });
+</script>
+</body>
+</html>
